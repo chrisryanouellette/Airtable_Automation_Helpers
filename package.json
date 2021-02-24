@@ -1,0 +1,20 @@
+{
+	"name": "airtable_automation_helpers",
+	"version": "0.0.1",
+	"description": "A package for interacting with Airtable from thier automation scripts",
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "webpack --config webpack.config.js"
+	},
+	"author": "Christopher Ouellette",
+	"license": "MIT",
+	"devDependencies": {
+		"ts-loader": "^8.0.17",
+		"typescript": "^4.2.2",
+		"webpack": "^5.24.1",
+		"webpack-cli": "^4.5.0"
+	},
+	"dependencies": {
+		"@airtable/blocks": "^1.4.1"
+	}
+}
