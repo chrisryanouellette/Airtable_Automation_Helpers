@@ -70,7 +70,7 @@ export const tables = {
 		const items = Object.entries(mappings).filter(
 			([refName, mapping]) => mapping.tableId === tableId
 		)
-		if (opts.refNames) {
+		if (opts?.refNames) {
 			return Object.fromEntries(
 				items.filter(([refName, mapping]) => opts.refNames.includes(refName))
 			)
@@ -78,7 +78,6 @@ export const tables = {
 			return Object.fromEntries(items)
 		}
 	},
-
 	getMappingsForView(args: {
 		view: View | string
 		mappings: { [label: string]: Mapping.ViewMapping }
@@ -92,7 +91,7 @@ export const tables = {
 		const viewMapping = Object.values(mappings).find(
 			(mapping) => mapping.id === viewId
 		)
-		if (opts.refNames || opts.fieldIds) {
+		if (opts?.refNames || opts?.fieldIds) {
 			const filter = opts.refNames || opts.fieldIds
 			const fieldMappings = Object.entries(
 				viewMapping.fields
@@ -101,5 +100,19 @@ export const tables = {
 		} else {
 			return viewMapping.fields
 		}
+	},
+	getMappingsForFields(args: {
+		viewMappings: {
+			[refName: string]: Mapping.ViewMapping
+		}
+	}): { [refName: string]: Mapping.FieldMapping } {
+		const { viewMappings } = args
+		const fieldMappings: { [refName: string]: Mapping.FieldMapping } = {}
+		Object.values(viewMappings).forEach((viewMapping) =>
+			Object.entries(viewMapping.fields).forEach(
+				([refName, fieldMapping]) => (fieldMappings[refName] = fieldMapping)
+			)
+		)
+		return fieldMappings
 	},
 }
