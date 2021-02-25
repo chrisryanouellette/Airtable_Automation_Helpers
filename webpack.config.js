@@ -2,12 +2,12 @@ const path = require('path')
 
 module.exports = {
 	mode: 'production',
-	entry: path.join(__dirname, '/src/index.ts'),
+	entry: path.join(__dirname, './src/index.ts'),
 	output: {
 		filename: 'index.js',
 		path: path.join(__dirname, '/dist'),
 		library: 'AT',
-		libraryTarget: 'this',
+		libraryTarget: 'var',
 		libraryExport: 'default',
 	},
 	module: {
