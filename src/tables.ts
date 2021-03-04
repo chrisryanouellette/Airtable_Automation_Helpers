@@ -15,7 +15,6 @@ export const tables = {
 		}
 		return table
 	},
-
 	getView(table: Table | string, viewNameOrId: string): View | null {
 		const Table = typeof table === 'string' ? tables.getTable(table) : table
 		let view: View = null
@@ -28,10 +27,8 @@ export const tables = {
 		}
 		return view
 	},
-
 	getField(table: Table | string, fieldNameOrId: string): Field | null {
-		const Table: Table =
-			typeof table === 'string' ? tables.getTable(table) : (table as Table)
+		const Table: Table = typeof table === 'string' ? tables.getTable(table) : (table as Table)
 		let field: Field = null
 		try {
 			field = Table.getField(fieldNameOrId)
@@ -40,24 +37,24 @@ export const tables = {
 		}
 		return field
 	},
-
 	getFields(table: Table | string, fieldNamesOrIds: string[]): Field[] {
-		const Table: Table =
-			typeof table === 'string' ? tables.getTable(table) : (table as Table)
+		const Table: Table = typeof table === 'string' ? tables.getTable(table) : (table as Table)
 		const fields: Field[] = []
-		const options = [...fieldNamesOrIds]
-		options.forEach((opt, index) => {
+		fieldNamesOrIds.forEach((opt) => {
 			let field: Field = null
 			try {
 				field = Table.getField(opt)
 			} catch (error) {
 				field = Table.fields.find((f) => f.name === opt) || null
 			}
-			if (field) fields.push(field)
+			if (!field) {
+				throw new Error(`No field found for name or id '${opt}' in table ${Table.name}`)
+			}
+			fields.push(field)
 		})
 		return fields
 	},
-
+	/** Returns the View mappings for a table */
 	getMappingsForTable(args: {
 		table: Table | string
 		mappings: { [label: string]: Mapping.ViewMapping }
@@ -78,6 +75,7 @@ export const tables = {
 			return Object.fromEntries(items)
 		}
 	},
+	/** Returns the Field mappings for a View */
 	getMappingsForView(args: {
 		view: View | string
 		mappings: { [label: string]: Mapping.ViewMapping }
@@ -88,20 +86,19 @@ export const tables = {
 	}): { [refName: string]: Mapping.FieldMapping } {
 		const { view, mappings, opts } = args
 		const viewId = typeof view !== 'string' ? view.id : view
-		const viewMapping = Object.values(mappings).find(
-			(mapping) => mapping.id === viewId
-		)
+		const viewMapping = Object.values(mappings).find((mapping) => mapping.id === viewId)
 		if (opts?.refNames || opts?.fieldIds) {
 			const filter = opts.refNames || opts.fieldIds
-			const fieldMappings = Object.entries(
-				viewMapping.fields
-			).filter(([refName, mapping]) => filter.includes(refName))
+			const fieldMappings = Object.entries(viewMapping.fields).filter(([refName, mapping]) =>
+				filter.includes(refName)
+			)
 			return Object.fromEntries(fieldMappings)
 		} else {
 			return viewMapping.fields
 		}
 	},
-	getMappingsForFields(args: {
+	/** Returns all the Field mappings for a Table */
+	getMappingsForViews(args: {
 		viewMappings: {
 			[refName: string]: Mapping.ViewMapping
 		}
