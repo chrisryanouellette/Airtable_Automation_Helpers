@@ -81,6 +81,7 @@ export const records = (function () {
 							case FieldType.MULTILINE_TEXT:
 							case FieldType.RICH_TEXT:
 							case FieldType.CHECKBOX:
+							case FieldType.EMAIL:
 							case FieldType.SINGLE_SELECT:
 							case FieldType.SINGLE_COLLABORATOR:
 								fields[key] = fieldValue
