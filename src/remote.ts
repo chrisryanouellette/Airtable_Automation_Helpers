@@ -1,5 +1,8 @@
 import { Record as R } from './types/records'
 import { Remote } from './types/remote'
+import { Mapping } from './types/mappings'
+import { tables } from './tables'
+import { records as recordUtils } from './records'
 
 declare const APIKEY: string
 
@@ -24,7 +27,9 @@ export const remote = (function () {
 		return Object.entries(params || {})
 			.map(([label, values]) =>
 				Array.isArray(values)
-					? values.map((value) => formatQueryParameters({ [label]: value }))
+					? values.map((value) =>
+							formatQueryParameters({ [label]: value })
+					  )
 					: `${label}=${encodeURIComponent(values)}`
 			)
 			.join('&')
@@ -38,7 +43,9 @@ export const remote = (function () {
 	}): Promise<Remote.Response> {
 		const { path, method, baseId, payload } = args
 		if ((method === 'GET' || method === 'DELETE') && payload) {
-			throw new Error(`GET / DELETE requests can not have a request body.`)
+			throw new Error(
+				`GET / DELETE requests can not have a request body.`
+			)
 		}
 		const response = await fetch(`${url}v${airtableVersion}/${path}`, {
 			headers: makeHeaders(baseId),
@@ -105,6 +112,45 @@ export const remote = (function () {
 			}
 			return results
 		},
+		convertFieldsToNames: function <
+			T extends { [index: string]: R.CutomField }
+		>(args: {
+			tableId: string
+			records: Remote.CreateOrUpdateResponse[]
+			mappings: { [refName: string]: Mapping.ViewMapping }
+		}): R.Record<T>[] {
+			const { tableId, records, mappings } = args
+			if (!records || !records.length) return []
+			const mappingsForTable = tables.getMappingsForTable({
+				table: tableId,
+				mappings,
+			})
+			const fieldMappings = tables.getMappingsForViews({
+				viewMappings: mappingsForTable,
+			})
+			return records.map((record) => {
+				const fields: { [index: string]: R.CutomField } = {}
+				Object.entries(fieldMappings).forEach(([key, field]) => {
+					const fieldValue: unknown = record.fields[field.name]
+					if (fieldValue === null || fieldValue === undefined) {
+						fields[key] = null
+					} else {
+						fields[key] = recordUtils.getCellValue(
+							field,
+							fieldValue
+						)
+					}
+				})
+				return {
+					id: record.id,
+					name: Object.values(record.fields).find(
+						(value) => typeof value === 'string'
+					) as string,
+					tableId,
+					fields: fields as T,
+				}
+			})
+		},
 		createRecords: async function (args: {
 			baseId: string
 			tableId: string
@@ -146,7 +192,9 @@ export const remote = (function () {
 			while (index < records.length) {
 				const round = records.slice(index, 10)
 				const result = (await makeFetchRequest({
-					path: `${baseId}/${tableId}?${round.map((id) => `records[]=${id}&`)}`,
+					path: `${baseId}/${tableId}?${round.map(
+						(id) => `records[]=${id}&`
+					)}`,
 					method: 'DELETE',
 					baseId,
 				})) as { records: Remote.DeleteResponce[] }

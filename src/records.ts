@@ -1,4 +1,10 @@
-import { Base, Table, View, TableOrViewQueryResult, Record } from '@airtable/blocks/models'
+import {
+	Base,
+	Table,
+	View,
+	TableOrViewQueryResult,
+	Record,
+} from '@airtable/blocks/models'
 import { FieldType } from './types/fieldtypes'
 import { Table as T } from './types/tables'
 import { Record as R } from './types/records'
@@ -15,7 +21,9 @@ export const records = (function () {
 	): Promise<TableOrViewQueryResult> {
 		const result = await tableOrView.selectRecordsAsync(opts || {})
 		if (!result.records.length) {
-			console.warn(`Model "${tableOrView.name}" does not have any records.`)
+			console.warn(
+				`Model "${tableOrView.name}" does not have any records.`
+			)
 		}
 		return result
 	}
@@ -35,6 +43,42 @@ export const records = (function () {
 		return results
 	}
 
+	function getCellValue(
+		field: Mapping.FieldMapping,
+		value: unknown
+	): string | number | T.SelectOption | T.SelectOption[] | null {
+		switch (field.type) {
+			case FieldType.SINGLE_LINE_TEXT:
+			case FieldType.MULTILINE_TEXT:
+			case FieldType.RICH_TEXT:
+			case FieldType.CHECKBOX:
+			case FieldType.EMAIL:
+				return value as string
+			case FieldType.SINGLE_SELECT:
+			case FieldType.SINGLE_COLLABORATOR:
+				return value as T.SelectOption
+			case FieldType.NUMBER:
+				return Number(value)
+			case FieldType.DATE:
+				const date = new Date((value as string).replace(/-/g, '/'))
+				return !isNaN(date.getTime()) ? formatDate(date) : null
+			case FieldType.DATE_TIME:
+			case FieldType.LAST_MODIFIED_TIME:
+				const dateTime = new Date((value as string).slice(0, -1))
+				return !isNaN(dateTime.getTime()) ? format(dateTime) : null
+			case FieldType.MULTIPLE_RECORD_LINKS:
+			case FieldType.MULTIPLE_SELECTS:
+			case FieldType.MULTIPLE_COLLABORATORS:
+				return (Array.isArray(value)
+					? value
+					: [value]) as T.SelectOption[]
+			default:
+				throw new Error(
+					`Field "${field.name}" has an unsupported type "${field.type}"`
+				)
+		}
+	}
+
 	return {
 		selectRecords(args: {
 			table: Table | string
@@ -43,25 +87,36 @@ export const records = (function () {
 		}): Promise<TableOrViewQueryResult> {
 			let { table, view, opts } = args
 			const Table: Table =
-				typeof table === 'string' ? tables.getTable(table) : (table as Table)
-			if (table === null) throw new Error(`No table with name or id "${table}" found.`)
+				typeof table === 'string'
+					? tables.getTable(table)
+					: (table as Table)
+			if (table === null)
+				throw new Error(`No table with name or id "${table}" found.`)
 			const View: View =
-				view && typeof view === 'string' ? tables.getView(table, view) : (view as View)
+				view && typeof view === 'string'
+					? tables.getView(table, view)
+					: (view as View)
 
 			if (!Table || (view && !View)) {
 				throw new Error(`Select Records: Unable to find Model.`)
 			}
-			return View ? selectRecordsFromModel(View, opts) : selectRecordsFromModel(Table, opts)
+			return View
+				? selectRecordsFromModel(View, opts)
+				: selectRecordsFromModel(Table, opts)
 		},
+		getCellValue,
 		/** Converts an AT record's fields to the provided reference names */
-		convertFieldsToNames<T extends { [index: string]: R.CutomField }>(args: {
+		convertFieldsToNames<
+			T extends { [index: string]: R.CutomField }
+		>(args: {
 			table: Table | string
 			records: Record[]
 			mappings: { [label: string]: Mapping.ViewMapping }
 		}): R.Record<T>[] {
 			const { table, records, mappings } = args
 			if (!records || !records.length) return []
-			const Table = typeof table === 'string' ? tables.getTable(table) : table
+			const Table =
+				typeof table === 'string' ? tables.getTable(table) : table
 			const mappingsForTable = tables.getMappingsForTable({
 				table: Table,
 				mappings,
@@ -76,40 +131,7 @@ export const records = (function () {
 					if (fieldValue === null || fieldValue === undefined) {
 						fields[key] = null
 					} else {
-						switch (field.type) {
-							case FieldType.SINGLE_LINE_TEXT:
-							case FieldType.MULTILINE_TEXT:
-							case FieldType.RICH_TEXT:
-							case FieldType.CHECKBOX:
-							case FieldType.EMAIL:
-							case FieldType.SINGLE_SELECT:
-							case FieldType.SINGLE_COLLABORATOR:
-								fields[key] = fieldValue
-								break
-							case FieldType.NUMBER:
-								fields[key] = Number(fieldValue)
-								break
-							case FieldType.DATE:
-								const date = new Date((fieldValue as string).replace(/-/g, '/'))
-								fields[key] = !isNaN(date.getTime()) ? formatDate(date) : null
-								break
-							case FieldType.DATE_TIME:
-							case FieldType.LAST_MODIFIED_TIME:
-								const dateTime = new Date((fieldValue as string).slice(0, -1))
-								fields[key] = !isNaN(dateTime.getTime()) ? format(dateTime) : null
-								break
-							case FieldType.MULTIPLE_RECORD_LINKS:
-							case FieldType.MULTIPLE_SELECTS:
-							case FieldType.MULTIPLE_COLLABORATORS:
-								fields[key] = Array.isArray(fieldValue) ? fieldValue : [fieldValue]
-								break
-							default:
-								console.warn(
-									`Default field conversion used for field ${field.name} ( ${field.type} )`
-								)
-								fields[key] = record.getCellValueAsString(field.id)
-								break
-						}
+						fields[key] = getCellValue(field, fieldValue)
 					}
 				})
 				return {
@@ -140,7 +162,9 @@ export const records = (function () {
 			const fieldMappings = tables.getMappingsForViews({
 				viewMappings: mappingsForTable,
 			})
-			const converedFields: [string, R.CutomField][] = Object.entries(fields)
+			const converedFields: [string, R.CutomField][] = Object.entries(
+				fields
+			)
 				.filter(([key, value]) => {
 					if (opts?.fieldsOnly && fields[key]) return true
 					if (!opts?.fieldsOnly) return true
@@ -148,7 +172,8 @@ export const records = (function () {
 				.map(([key, value]) => {
 					const fieldType = fieldMappings[key]?.type
 					const fieldId = fieldMappings[key]?.id
-					if (!fieldType || !fieldId) throw new Error(`Could not find mapping for ${key}`)
+					if (!fieldType || !fieldId)
+						throw new Error(`Could not find mapping for ${key}`)
 					switch (fieldType) {
 						case FieldType.EMAIL:
 						case FieldType.URL:
@@ -157,11 +182,17 @@ export const records = (function () {
 						case FieldType.MULTILINE_TEXT:
 						case FieldType.SINGLE_LINE_TEXT:
 						case FieldType.RICH_TEXT:
-							return typeof value === 'string' ? [fieldId, value] : [fieldId, null]
+							return typeof value === 'string'
+								? [fieldId, value]
+								: [fieldId, null]
 						case FieldType.NUMBER:
-							return isNaN(Number(value)) ? [fieldId, null] : [fieldId, Number(value)]
+							return isNaN(Number(value))
+								? [fieldId, null]
+								: [fieldId, Number(value)]
 						case FieldType.CHECKBOX:
-							return typeof value === 'boolean' ? [fieldId, value] : [fieldId, null]
+							return typeof value === 'boolean'
+								? [fieldId, value]
+								: [fieldId, null]
 						case FieldType.DATE:
 							return value instanceof Date
 								? [fieldId, value.toDateString()]
@@ -175,7 +206,9 @@ export const records = (function () {
 							const selectOption = value as T.SelectOption
 							if (selectOption === null) return [fieldId, null]
 							if (!selectOption.name && !selectOption.id) {
-								throw new Error(`Invalid Select Option. Missing Name or ID`)
+								throw new Error(
+									`Invalid Select Option. Missing Name or ID`
+								)
 							} else if (selectOption.id) {
 								return [fieldId, { id: selectOption.id }]
 							} else {
@@ -197,7 +230,9 @@ export const records = (function () {
 								) || null,
 							]
 						default:
-							throw new Error(`Unsupported Field type ${fieldType}`)
+							throw new Error(
+								`Unsupported Field type ${fieldType}`
+							)
 					}
 				})
 			return Object.fromEntries(converedFields)
@@ -208,9 +243,15 @@ export const records = (function () {
 		}): Promise<string[]> {
 			const { table, records } = args
 			const Table: Table =
-				typeof table === 'string' ? tables.getTable(table) : (table as Table)
-			const results = await throttleTableUsage(records, (records: R.ModifiedRecord[]) =>
-				Table.createRecordsAsync(records as { fields: R.LockedRecordFields }[])
+				typeof table === 'string'
+					? tables.getTable(table)
+					: (table as Table)
+			const results = await throttleTableUsage(
+				records,
+				(records: R.ModifiedRecord[]) =>
+					Table.createRecordsAsync(
+						records as { fields: R.LockedRecordFields }[]
+					)
 			)
 			return Array.isArray(results) ? results : []
 		},
@@ -220,17 +261,26 @@ export const records = (function () {
 		}): Promise<void> {
 			const { table, records } = args
 			const Table: Table =
-				typeof table === 'string' ? tables.getTable(table) : (table as Table)
+				typeof table === 'string'
+					? tables.getTable(table)
+					: (table as Table)
 			await throttleTableUsage(records, (records: R.ModifiedRecord[]) =>
 				Table.updateRecordsAsync(records as R.UpdateRecord[])
 			)
 		},
-		async deleteRecords(args: { table: Table | string; recordIds: string[] }): Promise<void> {
+		async deleteRecords(args: {
+			table: Table | string
+			recordIds: string[]
+		}): Promise<void> {
 			const { table, recordIds } = args
 			const Table: Table =
-				typeof table === 'string' ? tables.getTable(table) : (table as Table)
-			await throttleTableUsage(recordIds, (recordIds: R.ModifiedRecord[]) =>
-				Table.deleteRecordsAsync(recordIds as string[])
+				typeof table === 'string'
+					? tables.getTable(table)
+					: (table as Table)
+			await throttleTableUsage(
+				recordIds,
+				(recordIds: R.ModifiedRecord[]) =>
+					Table.deleteRecordsAsync(recordIds as string[])
 			)
 		},
 	}
