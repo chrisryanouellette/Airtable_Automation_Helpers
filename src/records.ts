@@ -56,7 +56,9 @@ export const records = (function () {
 				return value as string
 			case FieldType.SINGLE_SELECT:
 			case FieldType.SINGLE_COLLABORATOR:
-				return value as T.SelectOption
+				return typeof value === 'string'
+					? { name: value }
+					: (value as T.SelectOption)
 			case FieldType.NUMBER:
 				return Number(value)
 			case FieldType.DATE:
@@ -69,9 +71,13 @@ export const records = (function () {
 			case FieldType.MULTIPLE_RECORD_LINKS:
 			case FieldType.MULTIPLE_SELECTS:
 			case FieldType.MULTIPLE_COLLABORATORS:
-				return (Array.isArray(value)
-					? value
-					: [value]) as T.SelectOption[]
+				if (!Array.isArray(value))
+					throw new Error(
+						'Multi Select, Linked Records, and Collaborators must be arrays'
+					)
+				return value.map((v) =>
+					typeof v === 'string' ? { id: v } : v
+				) as T.SelectOption[]
 			default:
 				throw new Error(
 					`Field "${field.name}" has an unsupported type "${field.type}"`
