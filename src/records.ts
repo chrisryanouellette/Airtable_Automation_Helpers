@@ -35,10 +35,10 @@ export const records = (function () {
 		const results: string[] = []
 		let index = 0
 		while (records.length > index) {
-			const round = records.slice(index, 50)
+			const round = records.slice(index, index + 50)
 			let r = (await fn(round)) as string[] | void
 			if (r) results.push(...r)
-			index = index + 50
+			index = index + round.length
 		}
 		return results
 	}
