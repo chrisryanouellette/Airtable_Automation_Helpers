@@ -172,14 +172,17 @@ export const records = (function () {
 				fields
 			)
 				.filter(([key, value]) => {
-					if (opts?.fieldsOnly && fields[key]) return true
+					if (!fieldMappings[key]?.type || !fieldMappings[key]?.id) {
+						console.warn(`Could not find mapping for ${key}`)
+						return false
+					}
+					if (opts?.fieldsOnly && fields[key] !== undefined)
+						return true
 					if (!opts?.fieldsOnly) return true
 				})
 				.map(([key, value]) => {
-					const fieldType = fieldMappings[key]?.type
-					const fieldId = fieldMappings[key]?.id
-					if (!fieldType || !fieldId)
-						throw new Error(`Could not find mapping for ${key}`)
+					const fieldType = fieldMappings[key].type
+					const fieldId = fieldMappings[key].id
 					switch (fieldType) {
 						case FieldType.EMAIL:
 						case FieldType.URL:
