@@ -9,9 +9,7 @@ export const tables = {
 		try {
 			table = base.getTable(tableNameOrId)
 		} catch (error) {
-			if (!table) {
-				table = base.tables.find((t) => t.name === tableNameOrId) || null
-			}
+			table = base.tables.find((t) => t.name === tableNameOrId) || null
 		}
 		return table
 	},
@@ -28,7 +26,7 @@ export const tables = {
 		return view
 	},
 	getField(table: Table | string, fieldNameOrId: string): Field | null {
-		const Table: Table = typeof table === 'string' ? tables.getTable(table) : (table as Table)
+		const Table = typeof table === 'string' ? tables.getTable(table) : table
 		let field: Field = null
 		try {
 			field = Table.getField(fieldNameOrId)
@@ -38,20 +36,9 @@ export const tables = {
 		return field
 	},
 	getFields(table: Table | string, fieldNamesOrIds: string[]): Field[] {
-		const Table: Table = typeof table === 'string' ? tables.getTable(table) : (table as Table)
+		const Table = typeof table === 'string' ? tables.getTable(table) : table
 		const fields: Field[] = []
-		fieldNamesOrIds.forEach((opt) => {
-			let field: Field = null
-			try {
-				field = Table.getField(opt)
-			} catch (error) {
-				field = Table.fields.find((f) => f.name === opt) || null
-			}
-			if (!field) {
-				throw new Error(`No field found for name or id '${opt}' in table ${Table.name}`)
-			}
-			fields.push(field)
-		})
+		fieldNamesOrIds.forEach((opt) => tables.getField(Table, opt))
 		return fields
 	},
 	/** Returns the View mappings for a table */
@@ -69,7 +56,9 @@ export const tables = {
 		)
 		if (opts?.refNames) {
 			return Object.fromEntries(
-				items.filter(([refName, mapping]) => opts.refNames.includes(refName))
+				items.filter(([refName, mapping]) =>
+					opts.refNames.includes(refName)
+				)
 			)
 		} else {
 			return Object.fromEntries(items)
@@ -86,12 +75,14 @@ export const tables = {
 	}): { [refName: string]: Mapping.FieldMapping } {
 		const { view, mappings, opts } = args
 		const viewId = typeof view !== 'string' ? view.id : view
-		const viewMapping = Object.values(mappings).find((mapping) => mapping.id === viewId)
+		const viewMapping = Object.values(mappings).find(
+			(mapping) => mapping.id === viewId
+		)
 		if (opts?.refNames || opts?.fieldIds) {
 			const filter = opts.refNames || opts.fieldIds
-			const fieldMappings = Object.entries(viewMapping.fields).filter(([refName, mapping]) =>
-				filter.includes(refName)
-			)
+			const fieldMappings = Object.entries(
+				viewMapping.fields
+			).filter(([refName, mapping]) => filter.includes(refName))
 			return Object.fromEntries(fieldMappings)
 		} else {
 			return viewMapping.fields
@@ -107,7 +98,8 @@ export const tables = {
 		const fieldMappings: { [refName: string]: Mapping.FieldMapping } = {}
 		Object.values(viewMappings).forEach((viewMapping) =>
 			Object.entries(viewMapping.fields).forEach(
-				([refName, fieldMapping]) => (fieldMappings[refName] = fieldMapping)
+				([refName, fieldMapping]) =>
+					(fieldMappings[refName] = fieldMapping)
 			)
 		)
 		return fieldMappings
