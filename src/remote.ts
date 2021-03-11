@@ -90,9 +90,9 @@ export const remote = (function () {
 			baseId: string
 			tableId: string
 			query?: {
-				view: string
-				fields: string[]
-				filterByFormula: string
+				view?: string
+				fields?: string[]
+				filterByFormula?: string
 			}
 		}): Promise<Remote.CreateOrUpdateResponse[]> {
 			const { baseId, tableId, query } = args
@@ -181,13 +181,13 @@ export const remote = (function () {
 		deleteRecords: async function (args: {
 			baseId: string
 			tableId: string
-			records: string[]
+			recordIds: string[]
 		}): Promise<Remote.DeleteResponce[]> {
-			const { baseId, tableId, records } = args
+			const { baseId, tableId, recordIds } = args
 			const results: Remote.DeleteResponce[] = []
 			let index = 0
-			while (index < records.length) {
-				const round = records.slice(index, 10)
+			while (index < recordIds.length) {
+				const round = recordIds.slice(index, 10)
 				const result = (await makeFetchRequest({
 					path: `${baseId}/${tableId}?${round.map(
 						(id) => `records[]=${id}&`
