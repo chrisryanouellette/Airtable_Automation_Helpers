@@ -2,7 +2,7 @@ import { Record as R } from './types/records'
 import { Remote } from './types/remote'
 import { Mapping } from './types/mappings'
 import { tables } from './tables'
-import { records as recordUtils } from './records'
+import { getCellValue } from './fields'
 
 declare const APIKEY: string
 
@@ -135,10 +135,7 @@ export const remote = (function () {
 					if (fieldValue === null || fieldValue === undefined) {
 						fields[key] = null
 					} else {
-						fields[key] = recordUtils.getCellValue(
-							field,
-							fieldValue
-						)
+						fields[key] = getCellValue(field, fieldValue)
 					}
 				})
 				return {

@@ -10,6 +10,34 @@ export declare namespace Table {
 		id: string
 		name?: string
 	}
+	export interface AttachmentThumbnails {
+		url: string
+		width: number
+		height: number
+	}
+	export interface Attachment {
+		id: string
+		filename: string
+		size?: number
+		type?: string
+		thumbnails?: {
+			small?: AttachmentThumbnails
+			large?: AttachmentThumbnails
+			full?: AttachmentThumbnails
+		}
+	}
+	export interface LookUp {
+		linkedRecordId: string
+		value: unknown
+	}
+	export type FieldTypes =
+		| string
+		| number
+		| SelectOption
+		| SelectOption[]
+		| Attachment
+		| LookUp
+		| null
 	export interface SortOpts {
 		field: Field | string
 		direction?: 'asc' | 'desc'

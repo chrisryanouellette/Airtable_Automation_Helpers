@@ -2,17 +2,7 @@ import { CollaboratorData } from '@airtable/blocks/dist/types/src/types/collabor
 import { Table } from './tables'
 
 export declare namespace Record {
-	type CutomField =
-		| string
-		| number
-		| boolean
-		| Date
-		| Table.SelectOption
-		| Table.SelectOption[]
-		| Table.LinkedRecord
-		| Table.LinkedRecord[]
-		| CollaboratorData
-		| CollaboratorData[]
+	type CutomField = Table.FieldTypes
 
 	interface RecordFields {
 		[index: string]: Record.CutomField

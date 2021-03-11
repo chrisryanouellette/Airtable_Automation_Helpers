@@ -1,18 +1,7 @@
-import {
-	Base,
-	Table,
-	View,
-	TableOrViewQueryResult,
-	Record,
-} from '@airtable/blocks/models'
-import { FieldType } from './types/fieldtypes'
+import { Table, View, TableOrViewQueryResult } from '@airtable/blocks/models'
 import { Table as T } from './types/tables'
 import { Record as R } from './types/records'
 import { tables } from './tables'
-import { Mapping } from './types/mappings'
-import { format, formatDate } from './utils'
-
-declare const base: Base
 
 export const records = (function () {
 	async function selectRecordsFromModel(
@@ -43,48 +32,6 @@ export const records = (function () {
 		return results
 	}
 
-	function getCellValue(
-		field: Mapping.FieldMapping,
-		value: unknown
-	): string | number | T.SelectOption | T.SelectOption[] | null {
-		switch (field.type) {
-			case FieldType.SINGLE_LINE_TEXT:
-			case FieldType.MULTILINE_TEXT:
-			case FieldType.RICH_TEXT:
-			case FieldType.CHECKBOX:
-			case FieldType.EMAIL:
-				return value as string
-			case FieldType.SINGLE_SELECT:
-			case FieldType.SINGLE_COLLABORATOR:
-				return typeof value === 'string'
-					? { name: value }
-					: (value as T.SelectOption)
-			case FieldType.NUMBER:
-				return Number(value)
-			case FieldType.DATE:
-				const date = new Date((value as string).replace(/-/g, '/'))
-				return !isNaN(date.getTime()) ? formatDate(date) : null
-			case FieldType.DATE_TIME:
-			case FieldType.LAST_MODIFIED_TIME:
-				const dateTime = new Date((value as string).slice(0, -1))
-				return !isNaN(dateTime.getTime()) ? format(dateTime) : null
-			case FieldType.MULTIPLE_RECORD_LINKS:
-			case FieldType.MULTIPLE_SELECTS:
-			case FieldType.MULTIPLE_COLLABORATORS:
-				if (!Array.isArray(value))
-					throw new Error(
-						'Multi Select, Linked Records, and Collaborators must be arrays'
-					)
-				return value.map((v) =>
-					typeof v === 'string' ? { id: v } : v
-				) as T.SelectOption[]
-			default:
-				throw new Error(
-					`Field "${field.name}" has an unsupported type "${field.type}"`
-				)
-		}
-	}
-
 	return {
 		selectRecords(args: {
 			table: Table | string
@@ -110,142 +57,7 @@ export const records = (function () {
 				? selectRecordsFromModel(View, opts)
 				: selectRecordsFromModel(Table, opts)
 		},
-		getCellValue,
-		/** Converts an AT record's fields to the provided reference names */
-		convertFieldsToNames<
-			T extends { [index: string]: R.CutomField }
-		>(args: {
-			table: Table | string
-			records: Record[]
-			mappings: { [label: string]: Mapping.ViewMapping }
-		}): R.Record<T>[] {
-			const { table, records, mappings } = args
-			if (!records || !records.length) return []
-			const Table =
-				typeof table === 'string' ? tables.getTable(table) : table
-			const mappingsForTable = tables.getMappingsForTable({
-				table: Table,
-				mappings,
-			})
-			const fieldMappings = tables.getMappingsForViews({
-				viewMappings: mappingsForTable,
-			})
-			return records.map((record) => {
-				const fields: { [index: string]: R.CutomField } = {}
-				Object.entries(fieldMappings).forEach(([key, field]) => {
-					const fieldValue: unknown = record.getCellValue(field.id)
-					if (fieldValue === null || fieldValue === undefined) {
-						fields[key] = null
-					} else {
-						fields[key] = getCellValue(field, fieldValue)
-					}
-				})
-				return {
-					id: record.id,
-					name: record.name,
-					tableId: Table.id,
-					fields: fields as T,
-				}
-			})
-		},
-		/** Converts a record's fields from the refrence names to the field ids */
-		convertFieldsToIds(args: {
-			table: Table | string
-			fields: { [index: string]: R.CutomField }
-			mappings: { [label: string]: Mapping.ViewMapping }
-			opts?: {
-				fieldsOnly: boolean
-			}
-		}): R.LockedRecordFields {
-			const { table, fields, mappings, opts } = args
-			if (!Object.values(fields || {}).length) {
-				throw new Error('No fields where passed to convertFieldsToIds.')
-			}
-			const mappingsForTable = tables.getMappingsForTable({
-				table,
-				mappings,
-			})
-			const fieldMappings = tables.getMappingsForViews({
-				viewMappings: mappingsForTable,
-			})
-			const converedFields: [string, R.CutomField][] = Object.entries(
-				fields
-			)
-				.filter(([key, value]) => {
-					if (!fieldMappings[key]?.type || !fieldMappings[key]?.id) {
-						console.warn(`Could not find mapping for ${key}`)
-						return false
-					}
-					if (opts?.fieldsOnly && fields[key] !== undefined)
-						return true
-					if (!opts?.fieldsOnly) return true
-				})
-				.map(([key, value]) => {
-					const fieldType = fieldMappings[key].type
-					const fieldId = fieldMappings[key].id
-					switch (fieldType) {
-						case FieldType.EMAIL:
-						case FieldType.URL:
-						case FieldType.PHONE_NUMBER:
-						case FieldType.CREATED_TIME:
-						case FieldType.MULTILINE_TEXT:
-						case FieldType.SINGLE_LINE_TEXT:
-						case FieldType.RICH_TEXT:
-							return typeof value === 'string'
-								? [fieldId, value]
-								: [fieldId, null]
-						case FieldType.NUMBER:
-							return isNaN(Number(value))
-								? [fieldId, null]
-								: [fieldId, Number(value)]
-						case FieldType.CHECKBOX:
-							return typeof value === 'boolean'
-								? [fieldId, value]
-								: [fieldId, null]
-						case FieldType.DATE:
-							return value instanceof Date
-								? [fieldId, value.toDateString()]
-								: [fieldId, value]
-						case FieldType.DATE_TIME:
-							return value instanceof Date
-								? [fieldId, value.toISOString()]
-								: [fieldId, value]
-						case FieldType.SINGLE_COLLABORATOR:
-						case FieldType.SINGLE_SELECT:
-							const selectOption = value as T.SelectOption
-							if (selectOption === null) return [fieldId, null]
-							if (!selectOption.name && !selectOption.id) {
-								throw new Error(
-									`Invalid Select Option. Missing Name or ID`
-								)
-							} else if (selectOption.id) {
-								return [fieldId, { id: selectOption.id }]
-							} else {
-								return [fieldId, { name: selectOption.name }]
-							}
-						case FieldType.MULTIPLE_RECORD_LINKS:
-						case FieldType.MULTIPLE_COLLABORATORS:
-						case FieldType.MULTIPLE_SELECTS:
-							if (value !== null && !Array.isArray(value)) {
-								throw new Error(
-									`Multi Selects, Collaberators, and / or, Record Links must be an Array`
-								)
-							}
-							const selectOptions = value as T.SelectOption[]
-							return [
-								fieldId,
-								selectOptions?.map((opt) =>
-									opt.id ? { id: opt.id } : { name: opt.name }
-								) || null,
-							]
-						default:
-							throw new Error(
-								`Unsupported Field type ${fieldType}`
-							)
-					}
-				})
-			return Object.fromEntries(converedFields)
-		},
+
 		async createRecords(args: {
 			table: Table | string
 			records: { fields: R.LockedRecordFields }[]
