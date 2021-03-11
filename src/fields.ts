@@ -115,7 +115,7 @@ export const fields = (function () {
 		[FieldType.MULTIPLE_ATTACHMENTS]: handleMultiAttachments,
 	}
 
-	function getCellValue(
+	function formatCellValue(
 		field: Mapping.FieldMapping,
 		value: unknown
 	): T.FieldTypes {
@@ -159,7 +159,7 @@ export const fields = (function () {
 				if (value === null || value === undefined) {
 					fields[key] = null
 				} else {
-					fields[key] = getCellValue(field, value)
+					fields[key] = formatCellValue(field, value)
 				}
 			})
 			return {
@@ -190,7 +190,7 @@ export const fields = (function () {
 		const fieldMappings = tables.getMappingsForViews({
 			viewMappings: mappingsForTable,
 		})
-		const converedFields: R.LockedRecordFields = {}
+		const converedFields: R.RecordFields = {}
 		Object.entries(fields)
 			.filter(([key, value]) => {
 				if (!fieldMappings[key]?.type || !fieldMappings[key]?.id) {
@@ -205,15 +205,15 @@ export const fields = (function () {
 			.map(([key, value]) => {
 				const field = fieldMappings[key]
 				if (value === null || value === undefined) {
-					fields[key] = null
+					converedFields[field.id] = null
 				} else if (field.type === FieldType.DATE) {
-					fields[key] =
+					converedFields[field.id] =
 						value instanceof Date ? value.toDateString() : value
 				} else if (field.type === FieldType.DATE_TIME) {
-					fields[key] =
+					converedFields[field.id] =
 						value instanceof Date ? value.toISOString() : value
 				} else {
-					fields[key] = getCellValue(field, value)
+					converedFields[field.id] = formatCellValue(field, value)
 				}
 			})
 		return converedFields
@@ -222,8 +222,8 @@ export const fields = (function () {
 	return {
 		convertFieldsToNames,
 		convertFieldsToIds,
-		getCellValue,
+		formatCellValue,
 	}
 })()
 
-export const getCellValue = fields.getCellValue
+export const formatCellValue = fields.formatCellValue
