@@ -42,6 +42,7 @@ export const remote = (function () {
 		payload?: (R.LockedRecordFields | R.UpdateRecord)[]
 	}): Promise<Remote.Response> {
 		const { path, method, baseId, payload } = args
+		if (!APIKEY) throw new Error('Missing global variable "APIKEY"')
 		if ((method === 'GET' || method === 'DELETE') && payload) {
 			throw new Error(
 				`GET / DELETE requests can not have a request body.`
