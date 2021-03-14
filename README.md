@@ -10,7 +10,7 @@ This package is designed to be used with Airtable Mappings that can be created b
 2. Add some info to each field for the demo.
 3. Create a new automation with a trigger of 'When record is updated'.
 4. Create a 'Run Script' automation action.
-5. Use the Mapping App to create a the mappings for the Table.
+5. Use the [Mapping App](https://github.com/chrisryanouellette/Airtable_Mapping_App) to create the mappings for the Table.
 6. Remove any starter code from the new script and paste the [demo file's](demo/demo_automation.js) contents in its place.
 7. Replace the example mappings with the ones you created.
 8. Run the Script.
