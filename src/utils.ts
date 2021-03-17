@@ -20,8 +20,14 @@ export function format(date: Date): string {
 	return `${formatDate(date)} ${formatTime(date)}`
 }
 
+export function getTimestamp(args: { date?: Date; timeZone: string }): string {
+	const { date = new Date(), timeZone } = args
+	return date.toLocaleString('en-US', { timeZone })
+}
+
 export const utils = {
 	formatDate,
 	formatTime,
 	format,
+	getTimestamp,
 }
