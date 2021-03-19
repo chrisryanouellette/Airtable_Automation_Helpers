@@ -18,12 +18,12 @@ export const fields = (function () {
 
 	function handleDate(value: unknown): string {
 		const date = new Date((value as string).replace(/-/g, '/'))
-		return !isNaN(date.getTime()) ? formatDate(date) : null
+		return !isNaN(date.getTime()) ? date.toISOString() : null
 	}
 
 	function handleDateTime(value: unknown): string {
-		const dateTime = new Date((value as string).slice(0, -1))
-		return !isNaN(dateTime.getTime()) ? format(dateTime) : null
+		const dateTime = new Date((value as string).replace(/Z/g, ''))
+		return !isNaN(dateTime.getTime()) ? dateTime.toISOString() : null
 	}
 
 	function handleObject<T extends Object>(
