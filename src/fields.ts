@@ -18,12 +18,12 @@ export const fields = (function () {
 
 	function handleDate(value: unknown): string {
 		const date = new Date((value as string).replace(/-/g, '/'))
-		return !isNaN(date.getTime()) ? date.toISOString() : null
+		return !isNaN(date.getTime()) ? formatDate(date) : null
 	}
 
 	function handleDateTime(value: unknown): string {
 		const dateTime = new Date((value as string).replace(/Z/g, ''))
-		return !isNaN(dateTime.getTime()) ? dateTime.toISOString() : null
+		return !isNaN(dateTime.getTime()) ? format(dateTime) : null
 	}
 
 	function handleObject<T extends Object>(
@@ -206,12 +206,17 @@ export const fields = (function () {
 				const field = fieldMappings[key]
 				if (value === null || value === undefined) {
 					converedFields[field.id] = null
-				} else if (field.type === FieldType.DATE) {
-					converedFields[field.id] =
-						value instanceof Date ? value.toDateString() : value
-				} else if (field.type === FieldType.DATE_TIME) {
-					converedFields[field.id] =
-						value instanceof Date ? value.toISOString() : value
+				} else if (
+					field.type === FieldType.DATE_TIME ||
+					field.type === FieldType.DATE
+				) {
+					const date =
+						value instanceof Date
+							? value
+							: new Date(value as string | number)
+					converedFields[field.id] = !isNaN(date.getTime())
+						? date.toISOString()
+						: null
 				} else {
 					converedFields[field.id] = formatCellValue(field, value)
 				}
